@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s extglob
 
-THREADS=4
+THREADS=8
 
 RESIZE=100%
 SUBDIVISIONS=4
@@ -97,9 +97,9 @@ copy_task() {
   echo ${BASENAME_NO_EXT} ${DIRNAME} ${IMAGE_CHANNELS} ${DIRNAME_HASH}
 
   for TILE_INDEX in $(seq 0 $((${TILE_COUNT} - 1))); do
-    convert "${INPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_${TILE_INDEX}${INPUT_POSTFIX}.png" -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_${TILE_INDEX}.png"
+    magick convert "${INPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_${TILE_INDEX}${INPUT_POSTFIX}.png" -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_${TILE_INDEX}.png"
     if [ "${IMAGE_CHANNELS}" == "rgba" ] || [ "${IMAGE_CHANNELS}" == "srgba" ]; then
-      convert "${INPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_${TILE_INDEX}${INPUT_POSTFIX}.png" -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_${TILE_INDEX}.png"
+      magick convert "${INPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_${TILE_INDEX}${INPUT_POSTFIX}.png" -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_${TILE_INDEX}.png"
     fi
   done
 
