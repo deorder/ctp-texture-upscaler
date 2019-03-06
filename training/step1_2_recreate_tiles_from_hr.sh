@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s extglob
 
-THREADS="16"
+THREADS="8"
 
 # Ground truth
 HR_INPUT_DIR="./input/HR"
@@ -81,7 +81,7 @@ recreate_task() {
 
   mkdir -p "${LR_OUTPUT_DIR}/${RELATIVE_DIR}"
 
-  convert "${HR_INPUT_DIR}/${RELATIVE_DIR}/${BASENAME}" -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}"
+  magick convert "${HR_INPUT_DIR}/${RELATIVE_DIR}/${BASENAME}" -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}"
 
   sleep 0.5
   

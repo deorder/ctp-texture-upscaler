@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s extglob
 
-THREADS="4"
+THREADS="8"
 
 # Examples
 LR_INPUT_DIR="./output/LR"

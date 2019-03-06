@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s extglob
 
-THREADS="16"
+THREADS="8"
 
 # Min colors treshold
 MIN_COLORS=8
@@ -79,7 +79,7 @@ cleanup_task() {
   BASENAME=$(basename "${FILENAME}")
   BASENAME_NO_EXT="${BASENAME%.*}"
 
-  IMAGE_INFO=$(identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
+  IMAGE_INFO=$(magick identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
   IMAGE_WIDTH=$(echo ${IMAGE_INFO} | cut -d' ' -f 1)
   IMAGE_HEIGHT=$(echo ${IMAGE_INFO} | cut -d' ' -f 2)
   IMAGE_COLORS=$(echo ${IMAGE_INFO} | cut -d' ' -f 4)
