@@ -71,8 +71,7 @@ for OPTION in "$@"; do
 done
 
 USE_MAGICK=1
-if [ -n 'magick -version | fgrep "ImageMagick 7"' ]
-then
+if [ -x "$(command -v magick)" ]; then
   echo 'Using magick prefix.'
 else
   echo 'Using deprecated method.'
