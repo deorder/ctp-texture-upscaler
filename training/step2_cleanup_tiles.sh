@@ -67,10 +67,8 @@ for OPTION in "$@"; do
 done
 
 USE_MAGICK=1
-if [ -x "$(command -v magick)" ]; then
-  echo 'Using magick prefix.'
+if [ -x "$(command -v magick)" ];
 else
-  echo 'Using deprecated method.'
   USE_MAGICK=0
 fi
 
