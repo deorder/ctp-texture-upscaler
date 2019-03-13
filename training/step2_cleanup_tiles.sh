@@ -5,6 +5,7 @@ THREADS="8"
 
 # Min colors treshold
 MIN_COLORS=8
+MAX_COLORS=16581375
 
 # Min and max must be equal
 HR_MIN_TILE_WIDTH=128
@@ -25,8 +26,12 @@ for OPTION in "$@"; do
     THREADS="${OPTION#*=}"
     shift
     ;;
-    -c=*|--min-colors=*)
+    -cmin=*|--min-colors=*)
     MIN_COLORS="${OPTION#*=}"
+    shift
+    ;;
+    -cmax=*|--max-colors=*)
+    MAX_COLORS="${OPTION#*=}"
     shift
     ;;
     -l=*|--lr-output-dir=*)
@@ -50,7 +55,8 @@ for OPTION in "$@"; do
     *)
       echo "usage: $@ ..."
       echo "-t, --threads \"<number>\" (default: ${THREADS})"
-      echo "-c, --min-colors \"<number>\" (default: ${MIN_COLORS})"
+      echo "-cmin, --min-colors \"<number>\" (default: ${MIN_COLORS})"
+      echo "-cmax, --max-colors \"<number>\" (default: ${MAX_COLORS})"
       echo "-l, --lr-output-dir \"<lr output dir>\" (default: ${LR_OUTPUT_DIR})"
       echo "-h, --hr-output-dir \"<hr output dir>\" (default: ${HR_OUTPUT_DIR})"
       echo "-w, --tile-width \"<pixels>\" (default: ${HR_MIN_TILE_WIDTH})"
@@ -90,6 +96,13 @@ cleanup_task() {
   echo ${RELATIVE_DIR}/${BASENAME_NO_EXT} \(${IMAGE_WIDTH} ${IMAGE_HEIGHT} ${IMAGE_CHANNELS} ${IMAGE_COLORS}\)
 
   if [ "${IMAGE_COLORS}" -le "${MIN_COLORS}" ]; then
+    echo ${BASENAME_NO_EXT}, too little colors \(${IMAGE_COLORS}\), delete
+    rm -f ${HR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}
+    rm -f ${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}
+    return
+  fi
+
+  if [ "${IMAGE_COLORS}" -ge "${MAX_COLORS}" ]; then
     echo ${BASENAME_NO_EXT}, too little colors \(${IMAGE_COLORS}\), delete
     rm -f ${HR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}
     rm -f ${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}
