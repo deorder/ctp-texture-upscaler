@@ -70,6 +70,15 @@ for OPTION in "$@"; do
   esac
 done
 
+USE_MAGICK=1
+if [ -n 'magick -version | fgrep "ImageMagick 7"' ]
+then
+  echo 'Using magick prefix.'
+else
+  echo 'Using deprecated method.'
+  USE_MAGICK=0
+fi
+
 wait_for_jobs() {
   local JOBLIST=($(jobs -p))
   if [ "${#JOBLIST[@]}" -gt "${THREADS}" ]; then
@@ -97,7 +106,12 @@ while read ENTRY; do
   COLUMNS=$(echo ${ENTRY} | cut -d':' -f8)
   ROWS=$(echo ${ENTRY} | cut -d':' -f7)
 
-  TILE_INFO=$(magick identify -format '%[width] %[height]' "${INPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_0${INPUT_POSTFIX}.png")
+  if [ -z ${USE_MAGICK} ]
+  then
+    TILE_INFO=$(identify -format '%[width] %[height]' "${INPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_0${INPUT_POSTFIX}.png")
+  else
+    TILE_INFO=$(magick identify -format '%[width] %[height]' "${INPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_0${INPUT_POSTFIX}.png")
+  fi
 
   TILE_WIDTH=$(echo ${TILE_INFO} | cut -d' ' -f 1)
   TILE_HEIGHT=$(echo ${TILE_INFO} | cut -d' ' -f 2)
@@ -149,11 +163,21 @@ while read ENTRY; do
   fi
 
   if [ "${IMAGE_CHANNELS}" == "rgba" ] || [ "${IMAGE_CHANNELS}" == "srgba" ]; then
-    COMMAND="magick convert \\( ${RGB_ARGS} -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \\) \\( ${ALPHA_ARGS} -colorspace gray -alpha off -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \\) -compose copy-opacity -composite \"${OUTPUT_DIR}/${DIRNAME}/${BASENAME_NO_EXT}.png\""
+    if [ -z ${USE_MAGICK} ]
+    then
+      COMMAND="convert \\( ${RGB_ARGS} -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \\) \\( ${ALPHA_ARGS} -colorspace gray -alpha off -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \\) -compose copy-opacity -composite \"${OUTPUT_DIR}/${DIRNAME}/${BASENAME_NO_EXT}.png\""
+    else
+      COMMAND="magick convert \\( ${RGB_ARGS} -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \\) \\( ${ALPHA_ARGS} -colorspace gray -alpha off -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \\) -compose copy-opacity -composite \"${OUTPUT_DIR}/${DIRNAME}/${BASENAME_NO_EXT}.png\""
+    fi
   fi
 
   if [ "${IMAGE_CHANNELS}" == "rgb" ] || [ "${IMAGE_CHANNELS}" == "srgb" ]; then
-    COMMAND="magick convert \\( ${RGB_ARGS} \\) -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \"${OUTPUT_DIR}/${DIRNAME}/${BASENAME_NO_EXT}.png\""
+    if [ -z ${USE_MAGICK} ]
+    then
+      COMMAND="convert \\( ${RGB_ARGS} \\) -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \"${OUTPUT_DIR}/${DIRNAME}/${BASENAME_NO_EXT}.png\""
+    else
+      COMMAND="magick convert \\( ${RGB_ARGS} \\) -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} \"${OUTPUT_DIR}/${DIRNAME}/${BASENAME_NO_EXT}.png\""
+    fi
   fi
 
   wait_for_jobs

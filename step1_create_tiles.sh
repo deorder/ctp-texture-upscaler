@@ -76,6 +76,15 @@ for OPTION in "$@"; do
   esac
 done
 
+USE_MAGICK=1
+if [ -n 'magick -version | fgrep "ImageMagick 7"' ]
+then
+  echo 'Using magick prefix.'
+else
+  echo 'Using deprecated method.'
+  USE_MAGICK=0
+fi
+
 :> "${INDEX_FILE}"
 mkdir -p "${OUTPUT_DIR}"
 
@@ -118,10 +127,21 @@ create_tiles_task() {
         TILE_X2=$(((${TILE_COLUMN_INDEX} * ${TILE_WIDTH}) + ${TILE_WIDTH}))
         TILE_Y2=$(((${TILE_ROW_INDEX} * ${TILE_HEIGHT}) + ${TILE_HEIGHT}))
 
-        magick convert "${INPUT_PATH}" -alpha off -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_${TILE_INDEX}.png"
-
-        if [ "${IMAGE_CHANNELS}" == "rgba" ] || [ "${IMAGE_CHANNELS}" == "srgba" ]; then
-          magick convert "${INPUT_PATH}" -alpha extract -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_alpha_${TILE_INDEX}.png"
+        if [ -z ${USE_MAGICK} ]
+        then
+          convert "${INPUT_PATH}" -alpha off -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_${TILE_INDEX}.png"
+        else
+          magick convert "${INPUT_PATH}" -alpha off -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_${TILE_INDEX}.png"
+        fi
+        
+        if [ "${IMAGE_CHANNELS}" == "rgba" ] || [ "${IMAGE_CHANNELS}" == "srgba" ]; 
+        then
+          if [ -z ${USE_MAGICK} ]
+          then
+            magick convert "${INPUT_PATH}" -alpha extract -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_alpha_${TILE_INDEX}.png"
+          else
+            convert "${INPUT_PATH}" -alpha extract -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_alpha_${TILE_INDEX}.png"
+          fi
         fi
 
       done
