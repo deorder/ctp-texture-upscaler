@@ -66,6 +66,15 @@ for OPTION in "$@"; do
   esac
 done
 
+USE_MAGICK=1
+if [ -n 'magick -version | fgrep "ImageMagick 7"' ]
+then
+  echo 'Using magick prefix.'
+else
+  echo 'Using deprecated method.'
+  USE_MAGICK=0
+fi
+
 wait_for_jobs() {
   local JOBLIST=($(jobs -p))
   if [ "${#JOBLIST[@]}" -gt "${THREADS}" ]; then
@@ -85,7 +94,12 @@ cleanup_task() {
   BASENAME=$(basename "${FILENAME}")
   BASENAME_NO_EXT="${BASENAME%.*}"
 
-  IMAGE_INFO=$(magick identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
+  if [ -z ${USE_MAGICK} ]
+  then
+    IMAGE_INFO=$(identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
+  else
+    IMAGE_INFO=$(magick identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
+  fi
   IMAGE_WIDTH=$(echo ${IMAGE_INFO} | cut -d' ' -f 1)
   IMAGE_HEIGHT=$(echo ${IMAGE_INFO} | cut -d' ' -f 2)
   IMAGE_COLORS=$(echo ${IMAGE_INFO} | cut -d' ' -f 4)

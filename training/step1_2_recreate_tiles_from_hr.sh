@@ -56,6 +56,15 @@ for OPTION in "$@"; do
   esac
 done
 
+USE_MAGICK=1
+if [ -n 'magick -version | fgrep "ImageMagick 7"' ]
+then
+  echo 'Using magick prefix.'
+else
+  echo 'Using deprecated method.'
+  USE_MAGICK=0
+fi
+
 wait_for_jobs() {
   local JOBLIST=($(jobs -p))
   if [ "${#JOBLIST[@]}" -gt "${THREADS}" ]; then
@@ -81,7 +90,12 @@ recreate_task() {
 
   mkdir -p "${LR_OUTPUT_DIR}/${RELATIVE_DIR}"
 
-  magick convert "${HR_INPUT_DIR}/${RELATIVE_DIR}/${BASENAME}" -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}"
+  if [ -z ${USE_MAGICK} ]
+  then
+    convert "${HR_INPUT_DIR}/${RELATIVE_DIR}/${BASENAME}" -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}"
+  else
+    magick convert "${HR_INPUT_DIR}/${RELATIVE_DIR}/${BASENAME}" -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}"
+  fi
 
   sleep 0.5
   
