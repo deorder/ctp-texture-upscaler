@@ -137,9 +137,9 @@ create_tiles_task() {
         then
           if [ -z ${USE_MAGICK} ]
           then
-            magick convert "${INPUT_PATH}" -alpha extract -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_alpha_${TILE_INDEX}.png"
-          else
             convert "${INPUT_PATH}" -alpha extract -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_alpha_${TILE_INDEX}.png"
+          else
+            magick convert "${INPUT_PATH}" -alpha extract -crop $((${TILE_WIDTH} + ${OVERDRAW}))x$((${TILE_HEIGHT} + ${OVERDRAW}))+${TILE_X1}+${TILE_Y1} +repage +adjoin -define png:color-type=2 -interpolate ${INTERPOLATE} -filter ${FILTER} -resize ${RESIZE} "${OUTPUT_BASENAME}_alpha_${TILE_INDEX}.png"
           fi
         fi
 
