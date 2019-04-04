@@ -64,7 +64,7 @@ for OPTION in "$@"; do
     HR_INTERPOLATE="${OPTION#*=}"
     shift
     ;;
-    -h=*|--hr-output-dir=*)
+    -hr=*|--hr-output-dir=*)
     HR_OUTPUT_DIR="${OPTION#*=}"
     shift
     ;;
