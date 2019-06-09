@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s extglob
 
-THREADS="4"
+THREADS="8"
 INPUT_DIR="./input"
 
 # Examples
@@ -64,7 +64,7 @@ for OPTION in "$@"; do
     HR_INTERPOLATE="${OPTION#*=}"
     shift
     ;;
-    -h=*|--hr-output-dir=*)
+    -hr=*|--hr-output-dir=*)
     HR_OUTPUT_DIR="${OPTION#*=}"
     shift
     ;;
@@ -97,6 +97,14 @@ for OPTION in "$@"; do
   esac
 done
 
+USE_MAGICK=1
+if [ -x "$(command -v magick)" ]; then
+  echo 'Using magick prefix.'
+else
+  echo 'Using deprecated method.'
+  USE_MAGICK=0
+fi
+
 wait_for_jobs() {
   local JOBLIST=($(jobs -p))
   if [ "${#JOBLIST[@]}" -gt "${THREADS}" ]; then
@@ -122,8 +130,12 @@ while read FILENAME; do
   CATEGORY=$(echo ${BASENAME} | sed -ne "${CATEGORY_REGEXP}")
 
   if [ ! -f "${OUTPUT_DIR}/${DIRNAME_HASH}_${BASENAME_NO_EXT}_000.png" ]; then
-
-    IMAGE_INFO=$(identify -format '%[width] %[height] %[channels]' "${FILENAME}")
+    if [ -z ${USE_MAGICK} ]
+    then
+      IMAGE_INFO=$(identify -format '%[width] %[height] %[channels]' "${FILENAME}")
+    else
+      IMAGE_INFO=$(magick identify -format '%[width] %[height] %[channels]' "${FILENAME}")
+    fi
     IMAGE_WIDTH=$(echo ${IMAGE_INFO} | cut -d' ' -f 1)
     IMAGE_HEIGHT=$(echo ${IMAGE_INFO} | cut -d' ' -f 2)
     IMAGE_CHANNELS=$(echo ${IMAGE_INFO} | cut -d' ' -f 3)
@@ -141,30 +153,59 @@ while read FILENAME; do
         HORIZONTAL_SUBDIVISIONS=$((${IMAGE_WIDTH} / ${MIN_TILE_WIDTH}))
       fi
 
-      if [ "$(convert "${FILENAME}" -alpha off -format "%[k]" info:)" -gt "1" ]; then
-        mkdir -p "${HR_OUTPUT_DIR}/${CATEGORY}/rgb"
-        mkdir -p "${LR_OUTPUT_DIR}/${CATEGORY}/rgb"
-        echo ${FILENAME}, rgb \(${IMAGE_WIDTH}x${IMAGE_HEIGHT} divided by ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}\) ${CATEGORY}
-        wait_for_jobs
-        convert "${FILENAME}" -alpha off -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${HR_INTERPOLATE} -filter ${HR_FILTER} -resize ${HR_SCALE} "${HR_OUTPUT_DIR}/${CATEGORY}/rgb/${DIRNAME_HASH}_${BASENAME_NO_EXT}_%03d.png" &
-        wait_for_jobs
-        convert "${FILENAME}" -alpha off -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${CATEGORY}/rgb/${DIRNAME_HASH}_${BASENAME_NO_EXT}_%03d.png" &
-      else
-        echo ${FILENAME}, rgb single color, skipped
-      fi
-      if [ "${IMAGE_CHANNELS}" == "rgba" ] || [ "${IMAGE_CHANNELS}" == "srgba" ]; then
-        if [ "$(convert "${FILENAME}" -alpha extract -format "%[k]" info:)" -gt "1" ]; then
-          mkdir -p "${HR_OUTPUT_DIR}/${CATEGORY}/alpha"
-          mkdir -p "${LR_OUTPUT_DIR}/${CATEGORY}/alpha"
-          echo ${FILENAME}, alpha \(${IMAGE_WIDTH}x${IMAGE_HEIGHT} divided by ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}\) ${CATEGORY}
+      if [ -z ${USE_MAGICK} ]
+      then
+        if [ "$(convert "${FILENAME}" -alpha off -format "%[k]" info:)" -gt "1" ]; then
+          mkdir -p "${HR_OUTPUT_DIR}/${CATEGORY}/rgb"
+          mkdir -p "${LR_OUTPUT_DIR}/${CATEGORY}/rgb"
+          echo ${FILENAME}, rgb \(${IMAGE_WIDTH}x${IMAGE_HEIGHT} divided by ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}\) ${CATEGORY}
           wait_for_jobs
-          convert "${FILENAME}" -alpha extract -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${HR_INTERPOLATE} -filter ${HR_FILTER} -resize ${HR_SCALE} "${HR_OUTPUT_DIR}/${CATEGORY}/alpha/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_%03d.png" &
+          convert "${FILENAME}" -alpha off -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${HR_INTERPOLATE} -filter ${HR_FILTER} -resize ${HR_SCALE} "${HR_OUTPUT_DIR}/${CATEGORY}/rgb/${DIRNAME_HASH}_${BASENAME_NO_EXT}_%03d.png" &
           wait_for_jobs
-          convert "${FILENAME}" -alpha extract -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${CATEGORY}/alpha/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_%03d.png" &
+          convert "${FILENAME}" -alpha off -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${CATEGORY}/rgb/${DIRNAME_HASH}_${BASENAME_NO_EXT}_%03d.png" &
         else
-          echo ${FILENAME}, alpha single color, skipped
+          echo ${FILENAME}, rgb single color, skipped
+        fi
+        if [ "${IMAGE_CHANNELS}" == "rgba" ] || [ "${IMAGE_CHANNELS}" == "srgba" ]; then
+          if [ "$(convert "${FILENAME}" -alpha extract -format "%[k]" info:)" -gt "1" ]; then
+            mkdir -p "${HR_OUTPUT_DIR}/${CATEGORY}/alpha"
+            mkdir -p "${LR_OUTPUT_DIR}/${CATEGORY}/alpha"
+            echo ${FILENAME}, alpha \(${IMAGE_WIDTH}x${IMAGE_HEIGHT} divided by ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}\) ${CATEGORY}
+            wait_for_jobs
+            convert "${FILENAME}" -alpha extract -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${HR_INTERPOLATE} -filter ${HR_FILTER} -resize ${HR_SCALE} "${HR_OUTPUT_DIR}/${CATEGORY}/alpha/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_%03d.png" &
+            wait_for_jobs
+            convert "${FILENAME}" -alpha extract -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${CATEGORY}/alpha/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_%03d.png" &
+          else
+            echo ${FILENAME}, alpha single color, skipped
+          fi
+        fi
+      else
+        if [ "$(magick convert "${FILENAME}" -alpha off -format "%[k]" info:)" -gt "1" ]; then
+          mkdir -p "${HR_OUTPUT_DIR}/${CATEGORY}/rgb"
+          mkdir -p "${LR_OUTPUT_DIR}/${CATEGORY}/rgb"
+          echo ${FILENAME}, rgb \(${IMAGE_WIDTH}x${IMAGE_HEIGHT} divided by ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}\) ${CATEGORY}
+          wait_for_jobs
+          magick convert "${FILENAME}" -alpha off -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${HR_INTERPOLATE} -filter ${HR_FILTER} -resize ${HR_SCALE} "${HR_OUTPUT_DIR}/${CATEGORY}/rgb/${DIRNAME_HASH}_${BASENAME_NO_EXT}_%03d.png" &
+          wait_for_jobs
+          magick convert "${FILENAME}" -alpha off -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${CATEGORY}/rgb/${DIRNAME_HASH}_${BASENAME_NO_EXT}_%03d.png" &
+        else
+          echo ${FILENAME}, rgb single color, skipped
+        fi
+        if [ "${IMAGE_CHANNELS}" == "rgba" ] || [ "${IMAGE_CHANNELS}" == "srgba" ]; then
+          if [ "$(magick convert "${FILENAME}" -alpha extract -format "%[k]" info:)" -gt "1" ]; then
+            mkdir -p "${HR_OUTPUT_DIR}/${CATEGORY}/alpha"
+            mkdir -p "${LR_OUTPUT_DIR}/${CATEGORY}/alpha"
+            echo ${FILENAME}, alpha \(${IMAGE_WIDTH}x${IMAGE_HEIGHT} divided by ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}\) ${CATEGORY}
+            wait_for_jobs
+            magick convert "${FILENAME}" -alpha extract -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${HR_INTERPOLATE} -filter ${HR_FILTER} -resize ${HR_SCALE} "${HR_OUTPUT_DIR}/${CATEGORY}/alpha/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_%03d.png" &
+            wait_for_jobs
+            magick convert "${FILENAME}" -alpha extract -crop ${HORIZONTAL_SUBDIVISIONS}x${VERTICAL_SUBDIVISIONS}@ +repage +adjoin -define png:color-type=2 -interpolate ${LR_INTERPOLATE} -filter ${LR_FILTER} -resize ${LR_SCALE} "${LR_OUTPUT_DIR}/${CATEGORY}/alpha/${DIRNAME_HASH}_${BASENAME_NO_EXT}_alpha_%03d.png" &
+          else
+            echo ${FILENAME}, alpha single color, skipped
+          fi
         fi
       fi
+      
 
     else
       echo ${FILENAME} too small \(${IMAGE_WIDTH}x${IMAGE_HEIGHT}\), skipped

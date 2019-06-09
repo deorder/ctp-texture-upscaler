@@ -1,10 +1,11 @@
 #!/bin/bash
 shopt -s extglob
 
-THREADS="16"
+THREADS="8"
 
 # Min colors treshold
 MIN_COLORS=8
+MAX_COLORS=16581375
 
 # Min and max must be equal
 HR_MIN_TILE_WIDTH=128
@@ -25,8 +26,12 @@ for OPTION in "$@"; do
     THREADS="${OPTION#*=}"
     shift
     ;;
-    -c=*|--min-colors=*)
+    -cmin=*|--min-colors=*)
     MIN_COLORS="${OPTION#*=}"
+    shift
+    ;;
+    -cmax=*|--max-colors=*)
+    MAX_COLORS="${OPTION#*=}"
     shift
     ;;
     -l=*|--lr-output-dir=*)
@@ -50,7 +55,8 @@ for OPTION in "$@"; do
     *)
       echo "usage: $@ ..."
       echo "-t, --threads \"<number>\" (default: ${THREADS})"
-      echo "-c, --min-colors \"<number>\" (default: ${MIN_COLORS})"
+      echo "-cmin, --min-colors \"<number>\" (default: ${MIN_COLORS})"
+      echo "-cmax, --max-colors \"<number>\" (default: ${MAX_COLORS})"
       echo "-l, --lr-output-dir \"<lr output dir>\" (default: ${LR_OUTPUT_DIR})"
       echo "-h, --hr-output-dir \"<hr output dir>\" (default: ${HR_OUTPUT_DIR})"
       echo "-w, --tile-width \"<pixels>\" (default: ${HR_MIN_TILE_WIDTH})"
@@ -59,6 +65,14 @@ for OPTION in "$@"; do
     ;;
   esac
 done
+
+USE_MAGICK=1
+if [ -x "$(command -v magick)" ]; then
+  echo 'Using magick prefix.'
+else
+  echo 'Using deprecated method.'
+  USE_MAGICK=0
+fi
 
 wait_for_jobs() {
   local JOBLIST=($(jobs -p))
@@ -79,7 +93,12 @@ cleanup_task() {
   BASENAME=$(basename "${FILENAME}")
   BASENAME_NO_EXT="${BASENAME%.*}"
 
-  IMAGE_INFO=$(identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
+  if [ -z ${USE_MAGICK} ]
+  then
+    IMAGE_INFO=$(identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
+  else
+    IMAGE_INFO=$(magick identify -format '%[width] %[height] %[channels] %[k]' "${FILENAME}")
+  fi
   IMAGE_WIDTH=$(echo ${IMAGE_INFO} | cut -d' ' -f 1)
   IMAGE_HEIGHT=$(echo ${IMAGE_INFO} | cut -d' ' -f 2)
   IMAGE_COLORS=$(echo ${IMAGE_INFO} | cut -d' ' -f 4)
@@ -90,6 +109,13 @@ cleanup_task() {
   echo ${RELATIVE_DIR}/${BASENAME_NO_EXT} \(${IMAGE_WIDTH} ${IMAGE_HEIGHT} ${IMAGE_CHANNELS} ${IMAGE_COLORS}\)
 
   if [ "${IMAGE_COLORS}" -le "${MIN_COLORS}" ]; then
+    echo ${BASENAME_NO_EXT}, too little colors \(${IMAGE_COLORS}\), delete
+    rm -f ${HR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}
+    rm -f ${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}
+    return
+  fi
+
+  if [ "${IMAGE_COLORS}" -ge "${MAX_COLORS}" ]; then
     echo ${BASENAME_NO_EXT}, too little colors \(${IMAGE_COLORS}\), delete
     rm -f ${HR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}
     rm -f ${LR_OUTPUT_DIR}/${RELATIVE_DIR}/${BASENAME}

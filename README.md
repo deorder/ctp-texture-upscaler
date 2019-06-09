@@ -75,6 +75,7 @@ The included scripts are for preparing your images to be used by ESRGAN, SFTGAN 
 
   - Put all the textures you want to process inside the `./input` directory
   - `./step1_create_tiles.sh --output-dir="sftgan/data/samples" --resize="200%"` (SFTGAN requires you to upscale first)
+  - `pushd ./sftgan/pytorch_test/; python3 test_segmentation.py; popd`
   - `pushd ./sftgan/pytorch_test/; python3 test_sftgan.py; popd`
   - `./step3_assemble_tiles.sh --input-dir="./sftgan/data/samples_result" --input-postfix="_rlt"`
   - Results will be inside `./output`
